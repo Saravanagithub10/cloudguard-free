@@ -94,3 +94,30 @@ export const getActivities = async () => {
   const response = await fetch(`${API_BASE_URL}/activity`);
   return handleResponse(response);
 };
+export const downloadFindingsCsv = async () => {
+  const response = await fetch(
+    `${API_BASE_URL}/reports/findings.csv`
+  );
+
+  if (!response.ok) {
+    throw new Error("Unable to download findings report.");
+  }
+
+  const csvBlob = await response.blob();
+  const downloadUrl = URL.createObjectURL(csvBlob);
+
+  const anchor = document.createElement("a");
+  anchor.href = downloadUrl;
+  anchor.download = "cloudguard-findings-report.csv";
+
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+
+  URL.revokeObjectURL(downloadUrl);
+};
+export const getSecurityReport = async () => {
+  const response = await fetch(`${API_BASE_URL}/reports`);
+  return handleResponse(response);
+};
+

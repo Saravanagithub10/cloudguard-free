@@ -7,6 +7,7 @@ const resourceRoutes = require("./routes/resourceRoutes");
 const alertRoutes = require("./routes/alertRoutes");
 const incidentRoutes = require("./routes/incidentRoutes");
 const activityRoutes = require("./routes/activityRoutes");
+const reportRoutes = require("./routes/reportRoutes");
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.use("/api/resources", resourceRoutes);
 app.use("/api/alerts", alertRoutes);
 app.use("/api/incidents", incidentRoutes);
 app.use("/api/activity", activityRoutes);
+app.use("/api/reports", reportRoutes);  
 
 const PORT = process.env.PORT || 5000;
 

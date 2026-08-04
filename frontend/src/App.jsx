@@ -5,27 +5,7 @@ import Resources from "./pages/Resources";
 import Alerts from "./pages/Alerts";
 import Incidents from "./pages/Incidents";
 import ActivityLogs from "./pages/ActivityLogs";
-
-function PlaceholderPage({ title, description }) {
-  return (
-    <main className="dashboard">
-      <header className="dashboard-header">
-        <div>
-          <p className="eyebrow">CloudGuard Free Edition</p>
-          <h1>{title}</h1>
-          <span>{description}</span>
-        </div>
-      </header>
-
-      <section className="panel placeholder-panel">
-        <div className="empty-state">
-          <h3>{title}</h3>
-          <p>This module will be implemented soon.</p>
-        </div>
-      </section>
-    </main>
-  );
-}
+import Reports from "./pages/Reports";
 
 function App() {
   return (
@@ -33,34 +13,45 @@ function App() {
       <Sidebar />
 
       <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-        <Route path="/dashboard" element={<Dashboard />} />
-
-        <Route path="/incidents" element={<Incidents />} />
-
-        <Route path="/alerts" element={<Alerts />} />
-          
-
-        <Route path="/resources" element={<Resources />} />
+        <Route
+          path="/"
+          element={<Navigate to="/dashboard" replace />}
+        />
 
         <Route
-  path="/activity-logs"
-  element={<ActivityLogs />}
-/>
-         
+          path="/dashboard"
+          element={<Dashboard />}
+        />
+
+        <Route
+          path="/resources"
+          element={<Resources />}
+        />
+
+        <Route
+          path="/alerts"
+          element={<Alerts />}
+        />
+
+        <Route
+          path="/incidents"
+          element={<Incidents />}
+        />
+
+        <Route
+          path="/activity-logs"
+          element={<ActivityLogs />}
+        />
 
         <Route
           path="/reports"
-          element={
-            <PlaceholderPage
-              title="Reports"
-              description="View cloud security reports."
-            />
-          }
+          element={<Reports />}
         />
 
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route
+          path="*"
+          element={<Navigate to="/dashboard" replace />}
+        />
       </Routes>
     </div>
   );
