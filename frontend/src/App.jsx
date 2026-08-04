@@ -1,6 +1,9 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
+import Resources from "./pages/Resources";
+import Alerts from "./pages/Alerts";
+import Incidents from "./pages/Incidents";
 
 function PlaceholderPage({ title, description }) {
   return (
@@ -33,35 +36,12 @@ function App() {
 
         <Route path="/dashboard" element={<Dashboard />} />
 
-        <Route
-          path="/incidents"
-          element={
-            <PlaceholderPage
-              title="Incidents"
-              description="Track and manage cloud security incidents."
-            />
-          }
-        />
+        <Route path="/incidents" element={<Incidents />} />
 
-        <Route
-          path="/alerts"
-          element={
-            <PlaceholderPage
-              title="Alerts"
-              description="Review generated security alerts."
-            />
-          }
-        />
+        <Route path="/alerts" element={<Alerts />} />
+          
 
-        <Route
-          path="/resources"
-          element={
-            <PlaceholderPage
-              title="Resources"
-              description="Inspect monitored Azure resources."
-            />
-          }
-        />
+        <Route path="/resources" element={<Resources />} />
 
         <Route
           path="/activity-logs"
