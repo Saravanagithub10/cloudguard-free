@@ -4,6 +4,7 @@ import Dashboard from "./pages/Dashboard";
 import Resources from "./pages/Resources";
 import Alerts from "./pages/Alerts";
 import Incidents from "./pages/Incidents";
+import ActivityLogs from "./pages/ActivityLogs";
 
 function PlaceholderPage({ title, description }) {
   return (
@@ -44,14 +45,10 @@ function App() {
         <Route path="/resources" element={<Resources />} />
 
         <Route
-          path="/activity-logs"
-          element={
-            <PlaceholderPage
-              title="Activity Logs"
-              description="Review CloudGuard security activity."
-            />
-          }
-        />
+  path="/activity-logs"
+  element={<ActivityLogs />}
+/>
+         
 
         <Route
           path="/reports"

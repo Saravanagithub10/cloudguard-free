@@ -1,32 +1,32 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 
 function CreateIncidentForm({
-  alerts,
+  alerts = [],
   onCreate,
   actionLoading = false,
 }) {
-  const [formData, setFormData] = useState({
-    alertId: "",
-    title: "",
-    description: "",
-    assignedTo: "",
-    priority: "High",
-  });
+  const firstAlert = alerts[0] || null;
 
-  useEffect(() => {
-    if (!formData.alertId && alerts.length > 0) {
-      setFormData((current) => ({
-        ...current,
-        alertId: alerts[0].id,
-        title: `${alerts[0].title} investigation`,
-        description: `Investigate the ${alerts[0].title.toLowerCase()} finding detected on ${alerts[0].resourceName}.`,
-        priority: alerts[0].severity,
-      }));
-    }
-  }, [alerts, formData.alertId]);
+  const initialFormData = useMemo(
+    () => ({
+      alertId: firstAlert?.id || "",
+      title: firstAlert
+        ? `${firstAlert.title} investigation`
+        : "",
+      description: firstAlert
+        ? `Investigate the ${firstAlert.title.toLowerCase()} finding detected on ${firstAlert.resourceName}.`
+        : "",
+      assignedTo: "",
+      priority: firstAlert?.severity || "High",
+    }),
+    [firstAlert]
+  );
+
+  const [formData, setFormData] = useState(initialFormData);
 
   const handleAlertChange = (event) => {
     const alertId = event.target.value;
+
     const selectedAlert = alerts.find(
       (alert) => alert.id === alertId
     );
@@ -56,13 +56,19 @@ function CreateIncidentForm({
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    const success = await onCreate?.({
+    if (typeof onCreate !== "function") {
+      return;
+    }
+
+    const incidentData = {
       alertId: formData.alertId,
       title: formData.title.trim(),
       description: formData.description.trim(),
       assignedTo: formData.assignedTo.trim(),
       priority: formData.priority,
-    });
+    };
+
+    const success = await onCreate(incidentData);
 
     if (success) {
       setFormData((current) => ({
@@ -72,18 +78,32 @@ function CreateIncidentForm({
     }
   };
 
+  if (alerts.length === 0) {
+    return (
+      <article className="panel create-incident-panel">
+        <div className="empty-state small">
+          <h3>No alerts available</h3>
+          <p>All current alerts already have incidents.</p>
+        </div>
+      </article>
+    );
+  }
+
   return (
     <article className="panel create-incident-panel">
       <div className="panel-heading">
         <div>
           <h2>Create Incident</h2>
-          <p>Convert a security alert into an investigation case.</p>
+          <p>
+            Convert a security alert into an investigation case.
+          </p>
         </div>
       </div>
 
       <form className="incident-form" onSubmit={handleSubmit}>
         <label>
           Related Alert
+
           <select
             name="alertId"
             value={formData.alertId}
@@ -91,7 +111,8 @@ function CreateIncidentForm({
           >
             {alerts.map((alert) => (
               <option key={alert.id} value={alert.id}>
-                {alert.severity} — {alert.title} — {alert.resourceName}
+                {alert.severity} — {alert.title} —{" "}
+                {alert.resourceName}
               </option>
             ))}
           </select>
@@ -99,6 +120,7 @@ function CreateIncidentForm({
 
         <label>
           Incident Title
+
           <input
             name="title"
             value={formData.title}
@@ -109,6 +131,7 @@ function CreateIncidentForm({
 
         <label>
           Description
+
           <textarea
             name="description"
             rows={4}
@@ -121,6 +144,7 @@ function CreateIncidentForm({
         <div className="incident-form-row">
           <label>
             Assigned Analyst
+
             <input
               name="assignedTo"
               value={formData.assignedTo}
@@ -131,6 +155,7 @@ function CreateIncidentForm({
 
           <label>
             Priority
+
             <select
               name="priority"
               value={formData.priority}

@@ -1270,3 +1270,145 @@ a {
     flex-direction: column;
   }
 }
+.activity-controls-panel {
+  margin-bottom: 22px;
+}
+
+.activity-log-list {
+  position: relative;
+  display: grid;
+  gap: 16px;
+}
+
+.activity-log-list::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 18px;
+  width: 2px;
+  background: #1f3a58;
+}
+
+.activity-log-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 14px;
+}
+
+.activity-log-marker {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  padding-top: 19px;
+}
+
+.activity-log-dot {
+  width: 13px;
+  height: 13px;
+  border: 3px solid #08111f;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #2c7df0;
+  background: #2c7df0;
+}
+
+.activity-log-dot.incident {
+  box-shadow: 0 0 0 2px #31c48d;
+  background: #31c48d;
+}
+
+.activity-log-content {
+  padding: 20px;
+  border: 1px solid #1c314b;
+  border-radius: 14px;
+  background: #0e1b2c;
+}
+
+.activity-log-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.activity-log-header h3 {
+  margin: 6px 0 0;
+  font-size: 17px;
+}
+
+.activity-log-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.entity-badge,
+.action-badge {
+  display: inline-flex;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.entity-badge.alert {
+  background: rgba(45, 126, 247, 0.15);
+  color: #66aaff;
+}
+
+.entity-badge.incident {
+  background: rgba(49, 196, 141, 0.15);
+  color: #43d9a3;
+}
+
+.action-badge.created {
+  background: rgba(45, 126, 247, 0.15);
+  color: #66aaff;
+}
+
+.action-badge.acknowledged,
+.action-badge.in-progress {
+  background: rgba(250, 204, 21, 0.15);
+  color: #facc15;
+}
+
+.action-badge.resolved,
+.action-badge.closed {
+  background: rgba(49, 196, 141, 0.15);
+  color: #43d9a3;
+}
+
+.activity-log-content > p {
+  margin: 16px 0;
+  color: #9ab8d5;
+  line-height: 1.6;
+}
+
+.activity-log-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  color: #71849a;
+  font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .activity-log-card {
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .activity-log-list::before {
+    left: 12px;
+  }
+
+  .activity-log-header {
+    flex-direction: column;
+  }
+
+  .activity-log-content {
+    padding: 17px;
+  }
+}

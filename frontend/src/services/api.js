@@ -90,3 +90,7 @@ export const updateIncidentStatus = async (
 
   return handleResponse(response);
 };
+export const getActivities = async () => {
+  const response = await fetch(`${API_BASE_URL}/activity`);
+  return handleResponse(response);
+};
