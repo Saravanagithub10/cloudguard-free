@@ -2,6 +2,15 @@
  "scripts": {
   "start": "node server.js",
   "dev": "nodemon server.js"
+ },
+ "dependencies": {
+  "@azure/arm-resourcegraph": "^5.0.0",
+  "@azure/identity": "^4.13.1",
+  "cors": "^2.8.6",
+  "dotenv": "^17.4.2",
+  "express": "^5.2.1"
+ },
+ "devDependencies": {
+  "nodemon": "^3.1.14"
+ }
 }
-}
-

@@ -1,13 +1,28 @@
-const resources = require("../data/resources");
 const alerts = require("../data/alertStore");
 const incidents = require("../data/incidentStore");
-const { scanResources } = require("./resourceScanner");
+
+const {
+  getAzureResources,
+} = require("./azureResourceService");
+
+const {
+  synchronizeAzureAlerts,
+} = require("./liveAlertService");
+
 const {
   buildActivityLogs,
   buildActivitySummary,
 } = require("./activityService");
 
-const countByValue = (items, key, allowedValues = []) => {
+// ========================================
+// GENERIC COUNTER
+// ========================================
+
+const countByValue = (
+  items = [],
+  key,
+  allowedValues = []
+) => {
   const counts = {};
 
   allowedValues.forEach((value) => {
@@ -15,165 +30,478 @@ const countByValue = (items, key, allowedValues = []) => {
   });
 
   items.forEach((item) => {
-    const value = item[key] || "Unknown";
-    counts[value] = (counts[value] || 0) + 1;
+    const value =
+      item?.[key] || "Unknown";
+
+    counts[value] =
+      (counts[value] || 0) + 1;
   });
 
   return counts;
 };
 
-const calculateSecurityScore = (scannedResources) => {
-  const totalRiskPoints = scannedResources.reduce(
-    (total, resource) => total + resource.riskPoints,
-    0
-  );
+// ========================================
+// SECURITY SCORE
+// ========================================
 
-  const maximumRiskPoints = scannedResources.length * 100;
-
-  if (maximumRiskPoints === 0) {
+const calculateSecurityScore = (
+  scannedResources = []
+) => {
+  if (scannedResources.length === 0) {
     return 100;
   }
 
+  const totalRiskPoints =
+    scannedResources.reduce(
+      (total, resource) =>
+        total +
+        (resource.riskPoints || 0),
+      0
+    );
+
+  const maximumRiskPoints =
+    scannedResources.length * 100;
+
+  const score =
+    100 -
+    (totalRiskPoints /
+      maximumRiskPoints) *
+      100;
+
   return Math.max(
     0,
-    Math.round(
-      100 - (totalRiskPoints / maximumRiskPoints) * 100
+    Math.min(
+      100,
+      Math.round(score)
     )
   );
 };
 
-const buildSecurityReport = () => {
-  const scannedResources = scanResources(resources);
-  const activities = buildActivityLogs();
+// ========================================
+// BUILD LIVE SECURITY REPORT
+// ========================================
+
+const buildSecurityReport = async () => {
+  // Get latest resources directly from Azure
+  const azureResources =
+    await getAzureResources();
+
+  // Keep live alert store synchronized
+  // with current Azure findings.
+  await synchronizeAzureAlerts();
+
+  // Only resources for which CloudGuard
+  // currently has scanning rules.
+  const scannedResources =
+    azureResources.filter(
+      (resource) =>
+        resource.securityStatus !==
+        "Not Scanned"
+    );
+
+  const notScannedResources =
+    azureResources.filter(
+      (resource) =>
+        resource.securityStatus ===
+        "Not Scanned"
+    );
+
+  const activities =
+    buildActivityLogs();
+
+  // ========================================
+  // RESOURCE SUMMARY
+  // ========================================
 
   const resourceSummary = {
-    totalResources: scannedResources.length,
+    totalResources:
+      azureResources.length,
 
-    healthyResources: scannedResources.filter(
-      (resource) => resource.securityStatus === "Healthy"
-    ).length,
+    scannedResources:
+      scannedResources.length,
 
-    atRiskResources: scannedResources.filter(
-      (resource) => resource.securityStatus === "At Risk"
-    ).length,
+    notScannedResources:
+      notScannedResources.length,
 
-    criticalResources: scannedResources.filter(
-      (resource) => resource.riskLevel === "Critical"
-    ).length,
+    healthyResources:
+      scannedResources.filter(
+        (resource) =>
+          resource.securityStatus ===
+          "Healthy"
+      ).length,
 
-    securityScore: calculateSecurityScore(scannedResources),
+    atRiskResources:
+      scannedResources.filter(
+        (resource) =>
+          resource.securityStatus ===
+          "At Risk"
+      ).length,
+
+    criticalResources:
+      scannedResources.filter(
+        (resource) =>
+          resource.riskLevel ===
+          "Critical"
+      ).length,
+
+    highRiskResources:
+      scannedResources.filter(
+        (resource) =>
+          resource.riskLevel ===
+          "High"
+      ).length,
+
+    mediumRiskResources:
+      scannedResources.filter(
+        (resource) =>
+          resource.riskLevel ===
+          "Medium"
+      ).length,
+
+    lowRiskResources:
+      scannedResources.filter(
+        (resource) =>
+          resource.riskLevel ===
+          "Low"
+      ).length,
+
+    securityScore:
+      calculateSecurityScore(
+        scannedResources
+      ),
   };
+
+  // ========================================
+  // ALERT SUMMARY
+  // ========================================
 
   const alertSummary = {
-    totalAlerts: alerts.length,
+    totalAlerts:
+      alerts.length,
 
-    activeAlerts: alerts.filter(
-      (alert) => alert.status === "Active"
-    ).length,
+    activeAlerts:
+      alerts.filter(
+        (alert) =>
+          alert.status === "Active"
+      ).length,
 
-    acknowledgedAlerts: alerts.filter(
-      (alert) => alert.status === "Acknowledged"
-    ).length,
+    acknowledgedAlerts:
+      alerts.filter(
+        (alert) =>
+          alert.status ===
+          "Acknowledged"
+      ).length,
 
-    resolvedAlerts: alerts.filter(
-      (alert) => alert.status === "Resolved"
-    ).length,
+    resolvedAlerts:
+      alerts.filter(
+        (alert) =>
+          alert.status === "Resolved"
+      ).length,
+
+    criticalAlerts:
+      alerts.filter(
+        (alert) =>
+          alert.severity ===
+          "Critical"
+      ).length,
+
+    highAlerts:
+      alerts.filter(
+        (alert) =>
+          alert.severity === "High"
+      ).length,
+
+    mediumAlerts:
+      alerts.filter(
+        (alert) =>
+          alert.severity ===
+          "Medium"
+      ).length,
+
+    lowAlerts:
+      alerts.filter(
+        (alert) =>
+          alert.severity === "Low"
+      ).length,
   };
+
+  // ========================================
+  // INCIDENT SUMMARY
+  // ========================================
 
   const incidentSummary = {
-    totalIncidents: incidents.length,
+    totalIncidents:
+      incidents.length,
 
-    openIncidents: incidents.filter(
-      (incident) => incident.status === "Open"
-    ).length,
+    openIncidents:
+      incidents.filter(
+        (incident) =>
+          incident.status === "Open"
+      ).length,
 
-    inProgressIncidents: incidents.filter(
-      (incident) => incident.status === "In Progress"
-    ).length,
+    inProgressIncidents:
+      incidents.filter(
+        (incident) =>
+          incident.status ===
+          "In Progress"
+      ).length,
 
-    resolvedIncidents: incidents.filter(
-      (incident) => incident.status === "Resolved"
-    ).length,
+    resolvedIncidents:
+      incidents.filter(
+        (incident) =>
+          incident.status ===
+          "Resolved"
+      ).length,
 
-    closedIncidents: incidents.filter(
-      (incident) => incident.status === "Closed"
-    ).length,
+    closedIncidents:
+      incidents.filter(
+        (incident) =>
+          incident.status ===
+          "Closed"
+      ).length,
+
+    criticalIncidents:
+      incidents.filter(
+        (incident) =>
+          incident.severity ===
+          "Critical"
+      ).length,
   };
 
-  const findings = scannedResources.flatMap((resource) =>
-    resource.findings.map((finding) => ({
-      ...finding,
-      resourceId: resource.id,
-      resourceName: resource.name,
-      resourceType: resource.type,
-      resourceGroup: resource.resourceGroup,
-      region: resource.region,
-    }))
-  );
+  // ========================================
+  // LIVE AZURE FINDINGS
+  // ========================================
 
-  const severityBreakdown = countByValue(findings, "severity", [
-    "Critical",
-    "High",
-    "Medium",
-    "Low",
-  ]);
+  const findings =
+    scannedResources.flatMap(
+      (resource) => {
+        const resourceFindings =
+          Array.isArray(
+            resource.findings
+          )
+            ? resource.findings
+            : [];
 
-  const alertSeverityBreakdown = countByValue(alerts, "severity", [
-    "Critical",
-    "High",
-    "Medium",
-    "Low",
-  ]);
+        return resourceFindings.map(
+          (finding) => ({
+            ...finding,
 
-  const incidentStatusBreakdown = countByValue(
-    incidents,
-    "status",
-    ["Open", "In Progress", "Resolved", "Closed"]
-  );
+            // Compatibility with existing
+            // reports / CSV frontend.
+            title:
+              finding.finding ||
+              finding.title ||
+              "Security Finding",
 
-  const resourceTypeBreakdown = countByValue(
-    scannedResources,
-    "type"
-  );
+            finding:
+              finding.finding ||
+              finding.title ||
+              "Security Finding",
 
-  const topRiskResources = [...scannedResources]
-    .sort((first, second) => second.riskPoints - first.riskPoints)
-    .slice(0, 5)
-    .map((resource) => ({
-      id: resource.id,
-      name: resource.name,
-      type: resource.type,
-      riskLevel: resource.riskLevel,
-      riskPoints: resource.riskPoints,
-      findingsCount: resource.findings.length,
-    }));
+            points:
+              finding.riskPoints ??
+              finding.points ??
+              0,
+
+            resourceId:
+              resource.id,
+
+            resourceName:
+              resource.name,
+
+            resourceType:
+              resource.type,
+
+            azureType:
+              resource.azureType,
+
+            resourceGroup:
+              resource.resourceGroup,
+
+            region:
+              resource.region,
+
+            source:
+              resource.source ||
+              "Azure Resource Graph",
+          })
+        );
+      }
+    );
+
+  // ========================================
+  // BREAKDOWNS
+  // ========================================
+
+  const severityBreakdown =
+    countByValue(
+      findings,
+      "severity",
+      [
+        "Critical",
+        "High",
+        "Medium",
+        "Low",
+      ]
+    );
+
+  const alertSeverityBreakdown =
+    countByValue(
+      alerts,
+      "severity",
+      [
+        "Critical",
+        "High",
+        "Medium",
+        "Low",
+      ]
+    );
+
+  const incidentStatusBreakdown =
+    countByValue(
+      incidents,
+      "status",
+      [
+        "Open",
+        "In Progress",
+        "Resolved",
+        "Closed",
+      ]
+    );
+
+  const resourceTypeBreakdown =
+    countByValue(
+      azureResources,
+      "type"
+    );
+
+  const securityStatusBreakdown =
+    countByValue(
+      azureResources,
+      "securityStatus",
+      [
+        "Healthy",
+        "At Risk",
+        "Not Scanned",
+      ]
+    );
+
+  // ========================================
+  // TOP RISK RESOURCES
+  // ========================================
+
+  const topRiskResources =
+    [...scannedResources]
+      .sort(
+        (first, second) =>
+          (second.riskPoints || 0) -
+          (first.riskPoints || 0)
+      )
+      .slice(0, 5)
+      .map((resource) => ({
+        id:
+          resource.id,
+
+        name:
+          resource.name,
+
+        type:
+          resource.type,
+
+        azureType:
+          resource.azureType,
+
+        resourceGroup:
+          resource.resourceGroup,
+
+        region:
+          resource.region,
+
+        riskLevel:
+          resource.riskLevel,
+
+        riskPoints:
+          resource.riskPoints || 0,
+
+        findingsCount:
+          Array.isArray(
+            resource.findings
+          )
+            ? resource.findings.length
+            : 0,
+
+        securityStatus:
+          resource.securityStatus,
+
+        source:
+          resource.source ||
+          "Azure Resource Graph",
+      }));
+
+  // ========================================
+  // FINAL REPORT
+  // ========================================
 
   return {
-    generatedAt: new Date().toISOString(),
+    generatedAt:
+      new Date().toISOString(),
+
+    source:
+      "Azure Resource Graph",
 
     overview: {
-      securityScore: resourceSummary.securityScore,
-      totalResources: resourceSummary.totalResources,
-      totalFindings: findings.length,
-      totalAlerts: alertSummary.totalAlerts,
-      totalIncidents: incidentSummary.totalIncidents,
-      totalActivities: activities.length,
+      securityScore:
+        resourceSummary.securityScore,
+
+      totalResources:
+        resourceSummary.totalResources,
+
+      scannedResources:
+        resourceSummary.scannedResources,
+
+      notScannedResources:
+        resourceSummary.notScannedResources,
+
+      totalFindings:
+        findings.length,
+
+      totalAlerts:
+        alertSummary.totalAlerts,
+
+      totalIncidents:
+        incidentSummary.totalIncidents,
+
+      totalActivities:
+        activities.length,
     },
 
     resourceSummary,
+
     alertSummary,
+
     incidentSummary,
 
     severityBreakdown,
+
     alertSeverityBreakdown,
+
     incidentStatusBreakdown,
+
     resourceTypeBreakdown,
 
-    activitySummary: buildActivitySummary(activities),
+    securityStatusBreakdown,
+
+    activitySummary:
+      buildActivitySummary(
+        activities
+      ),
 
     topRiskResources,
+
     findings,
+
     alerts,
+
     incidents,
   };
 };

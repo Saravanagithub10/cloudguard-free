@@ -1,6 +1,14 @@
 const incidents = require("../data/incidentStore");
 const alerts = require("../data/alertStore");
 
+const {
+  synchronizeAzureAlerts,
+} = require("../services/liveAlertService");
+
+// ========================================
+// INCIDENT SUMMARY
+// ========================================
+
 const buildIncidentSummary = () => ({
   totalIncidents: incidents.length,
 
@@ -23,7 +31,50 @@ const buildIncidentSummary = () => ({
   criticalIncidents: incidents.filter(
     (incident) => incident.severity === "Critical"
   ).length,
+
+  highIncidents: incidents.filter(
+    (incident) => incident.severity === "High"
+  ).length,
+
+  mediumIncidents: incidents.filter(
+    (incident) => incident.severity === "Medium"
+  ).length,
+
+  lowIncidents: incidents.filter(
+    (incident) => incident.severity === "Low"
+  ).length,
 });
+
+// ========================================
+// GENERATE INCIDENT ID
+// ========================================
+
+const generateIncidentId = () => {
+  const numbers = incidents
+    .map((incident) => {
+      const match = String(incident.id || "").match(
+        /^INC-(\d+)$/
+      );
+
+      return match
+        ? Number(match[1])
+        : 0;
+    })
+    .filter(Number.isFinite);
+
+  const highestNumber =
+    numbers.length > 0
+      ? Math.max(...numbers)
+      : 0;
+
+  return `INC-${String(
+    highestNumber + 1
+  ).padStart(3, "0")}`;
+};
+
+// ========================================
+// GET ALL INCIDENTS
+// ========================================
 
 const getIncidents = (req, res) => {
   return res.status(200).json({
@@ -32,9 +83,14 @@ const getIncidents = (req, res) => {
   });
 };
 
+// ========================================
+// GET INCIDENT BY ID
+// ========================================
+
 const getIncidentById = (req, res) => {
   const incident = incidents.find(
-    (item) => item.id === req.params.id
+    (item) =>
+      item.id === req.params.id
   );
 
   if (!incident) {
@@ -43,118 +99,248 @@ const getIncidentById = (req, res) => {
     });
   }
 
-  return res.status(200).json(incident);
+  return res.status(200).json(
+    incident
+  );
 };
 
-const createIncident = (req, res) => {
-  const {
-    alertId,
-    title,
-    description,
-    assignedTo,
-    priority,
-  } = req.body || {};
+// ========================================
+// CREATE INCIDENT FROM LIVE AZURE ALERT
+// ========================================
 
-  const alert = alerts.find((item) => item.id === alertId);
+const createIncident = async (
+  req,
+  res
+) => {
+  try {
+    const {
+      alertId,
+      title,
+      description,
+      assignedTo,
+      priority,
+    } = req.body || {};
 
-  if (!alert) {
-    return res.status(404).json({
-      message: "Related alert not found.",
-    });
-  }
+    if (!alertId) {
+      return res.status(400).json({
+        message:
+          "Related alert ID is required.",
+      });
+    }
 
-  const existingIncident = incidents.find(
-    (incident) => incident.alertId === alertId
-  );
+    // Refresh alerts from current Azure findings.
+    await synchronizeAzureAlerts();
 
-  if (existingIncident) {
-    return res.status(409).json({
-      message: "An incident already exists for this alert.",
-    });
-  }
+    const alert = alerts.find(
+      (item) =>
+        item.id === alertId
+    );
 
-  const cleanTitle =
-    typeof title === "string" ? title.trim() : "";
+    if (!alert) {
+      return res.status(404).json({
+        message:
+          "Related Azure security alert not found.",
+      });
+    }
 
-  const cleanDescription =
-    typeof description === "string"
-      ? description.trim()
-      : "";
+    // Prevent duplicate incident creation.
+    const existingIncident =
+      incidents.find(
+        (incident) =>
+          incident.alertId ===
+          alertId
+      );
 
-  const cleanAssignedTo =
-    typeof assignedTo === "string"
-      ? assignedTo.trim()
-      : "";
+    if (existingIncident) {
+      return res.status(409).json({
+        message:
+          "An incident already exists for this alert.",
 
-  if (!cleanTitle) {
-    return res.status(400).json({
-      message: "Incident title is required.",
-    });
-  }
+        incident:
+          existingIncident,
+      });
+    }
 
-  if (!cleanDescription) {
-    return res.status(400).json({
-      message: "Incident description is required.",
-    });
-  }
+    const cleanTitle =
+      typeof title === "string"
+        ? title.trim()
+        : "";
 
-  if (!cleanAssignedTo) {
-    return res.status(400).json({
-      message: "Assigned analyst is required.",
-    });
-  }
+    const cleanDescription =
+      typeof description ===
+      "string"
+        ? description.trim()
+        : "";
 
-  const timestamp = new Date().toISOString();
+    const cleanAssignedTo =
+      typeof assignedTo ===
+      "string"
+        ? assignedTo.trim()
+        : "";
 
-  const incident = {
-    id: `INC-${String(incidents.length + 1).padStart(3, "0")}`,
-    alertId: alert.id,
-    title: cleanTitle,
-    description: cleanDescription,
-    severity: alert.severity,
-    priority: priority || alert.severity,
-    status: "Open",
-    assignedTo: cleanAssignedTo,
+    if (!cleanTitle) {
+      return res.status(400).json({
+        message:
+          "Incident title is required.",
+      });
+    }
 
-    resourceId: alert.resourceId,
-    resourceName: alert.resourceName,
-    resourceType: alert.resourceType,
-    resourceGroup: alert.resourceGroup,
+    if (!cleanDescription) {
+      return res.status(400).json({
+        message:
+          "Incident description is required.",
+      });
+    }
 
-    recommendation: alert.recommendation,
+    if (!cleanAssignedTo) {
+      return res.status(400).json({
+        message:
+          "Assigned analyst is required.",
+      });
+    }
 
-    createdAt: timestamp,
-    updatedAt: timestamp,
-    resolvedAt: null,
-    closedAt: null,
-    resolutionNote: "",
+    const allowedPriorities = [
+      "Critical",
+      "High",
+      "Medium",
+      "Low",
+    ];
 
-    activity: [
-      {
-        action: "Created",
-        message: `Incident created from alert ${alert.id}.`,
+    const selectedPriority =
+      allowedPriorities.includes(
+        priority
+      )
+        ? priority
+        : alert.severity;
+
+    const timestamp =
+      new Date().toISOString();
+
+    const incident = {
+      id: generateIncidentId(),
+
+      alertId: alert.id,
+
+      title: cleanTitle,
+
+      description:
+        cleanDescription,
+
+      severity:
+        alert.severity,
+
+      priority:
+        selectedPriority,
+
+      status: "Open",
+
+      assignedTo:
+        cleanAssignedTo,
+
+      // Azure resource information
+      resourceId:
+        alert.resourceId,
+
+      resourceName:
+        alert.resourceName,
+
+      resourceType:
+        alert.resourceType,
+
+      azureType:
+        alert.azureType,
+
+      resourceGroup:
+        alert.resourceGroup,
+
+      region:
+        alert.region,
+
+      // Security finding information
+      ruleId:
+        alert.ruleId,
+
+      riskPoints:
+        alert.riskPoints,
+
+      recommendation:
+        alert.recommendation,
+
+      source:
+        alert.source ||
+        "Azure Resource Graph",
+
+      createdAt:
         timestamp,
-      },
-    ],
-  };
 
-  incidents.push(incident);
+      updatedAt:
+        timestamp,
 
-  return res.status(201).json({
-    message: "Incident created successfully.",
-    incident,
-    summary: buildIncidentSummary(),
-  });
+      resolvedAt:
+        null,
+
+      closedAt:
+        null,
+
+      resolutionNote:
+        "",
+
+      activity: [
+        {
+          action: "Created",
+
+          message:
+            `Incident created from live Azure alert ${alert.id}.`,
+
+          timestamp,
+        },
+      ],
+    };
+
+    incidents.push(incident);
+
+    return res.status(201).json({
+      message:
+        "Incident created successfully from Azure security alert.",
+
+      incident,
+
+      summary:
+        buildIncidentSummary(),
+    });
+  } catch (error) {
+    console.error(
+      "Unable to create incident:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Unable to create incident from Azure security alert.",
+
+      error:
+        error.message,
+    });
+  }
 };
 
-const updateIncidentStatus = (req, res) => {
+// ========================================
+// UPDATE INCIDENT STATUS
+// ========================================
+
+const updateIncidentStatus = (
+  req,
+  res
+) => {
   const incident = incidents.find(
-    (item) => item.id === req.params.id
+    (item) =>
+      item.id === req.params.id
   );
 
   if (!incident) {
     return res.status(404).json({
-      message: "Incident not found.",
+      message:
+        "Incident not found.",
     });
   }
 
@@ -165,17 +351,33 @@ const updateIncidentStatus = (req, res) => {
     "Closed",
   ];
 
-  const { status, note } = req.body || {};
+  const { status, note } =
+    req.body || {};
 
-  if (!allowedStatuses.includes(status)) {
+  if (
+    !allowedStatuses.includes(
+      status
+    )
+  ) {
     return res.status(400).json({
-      message: "Invalid incident status.",
+      message:
+        "Invalid incident status.",
+    });
+  }
+
+  if (
+    incident.status === "Closed"
+  ) {
+    return res.status(400).json({
+      message:
+        "Closed incidents cannot be modified.",
     });
   }
 
   if (
     status === "Resolved" &&
-    incident.status !== "In Progress"
+    incident.status !==
+      "In Progress"
   ) {
     return res.status(400).json({
       message:
@@ -185,7 +387,8 @@ const updateIncidentStatus = (req, res) => {
 
   if (
     status === "Closed" &&
-    incident.status !== "Resolved"
+    incident.status !==
+      "Resolved"
   ) {
     return res.status(400).json({
       message:
@@ -194,43 +397,68 @@ const updateIncidentStatus = (req, res) => {
   }
 
   const cleanNote =
-    typeof note === "string" ? note.trim() : "";
+    typeof note === "string"
+      ? note.trim()
+      : "";
 
   if (
-    (status === "Resolved" || status === "Closed") &&
+    (status === "Resolved" ||
+      status === "Closed") &&
     !cleanNote
   ) {
     return res.status(400).json({
-      message: "A status note is required.",
+      message:
+        "A status note is required.",
     });
   }
 
-  const timestamp = new Date().toISOString();
+  const timestamp =
+    new Date().toISOString();
 
   incident.status = status;
   incident.updatedAt = timestamp;
 
-  if (status === "Resolved") {
-    incident.resolvedAt = timestamp;
-    incident.resolutionNote = cleanNote;
+  if (
+    status === "Resolved"
+  ) {
+    incident.resolvedAt =
+      timestamp;
+
+    incident.resolutionNote =
+      cleanNote;
   }
 
   if (status === "Closed") {
-    incident.closedAt = timestamp;
+    incident.closedAt =
+      timestamp;
+  }
+
+  if (
+    !Array.isArray(
+      incident.activity
+    )
+  ) {
+    incident.activity = [];
   }
 
   incident.activity.push({
     action: status,
+
     message:
       cleanNote ||
       `Incident status changed to ${status}.`,
+
     timestamp,
   });
 
   return res.status(200).json({
-    message: `Incident updated to ${status}.`,
+    message:
+      `Incident updated to ${status}.`,
+
     incident,
-    summary: buildIncidentSummary(),
+
+    summary:
+      buildIncidentSummary(),
   });
 };
 

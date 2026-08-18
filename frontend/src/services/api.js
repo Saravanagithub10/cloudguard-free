@@ -1,24 +1,46 @@
 const API_BASE_URL = "http://localhost:5000/api";
 
 const handleResponse = async (response) => {
-  const data = await response.json();
+  let data;
+
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error(
+      `CloudGuard API returned an invalid response (${response.status}).`
+    );
+  }
 
   if (!response.ok) {
-    throw new Error(data.message || "CloudGuard API request failed.");
+    throw new Error(
+      data.message || `CloudGuard API request failed (${response.status}).`
+    );
   }
 
   return data;
 };
+
+// =========================
+// HEALTH
+// =========================
 
 export const getHealthStatus = async () => {
   const response = await fetch(`${API_BASE_URL}/health`);
   return handleResponse(response);
 };
 
+// =========================
+// AZURE RESOURCES
+// =========================
+
 export const getResources = async () => {
-  const response = await fetch(`${API_BASE_URL}/resources`);
+  const response = await fetch(`${API_BASE_URL}/azure/resources`);
   return handleResponse(response);
 };
+
+// =========================
+// ALERTS
+// =========================
 
 export const getAlerts = async () => {
   const response = await fetch(`${API_BASE_URL}/alerts`);
@@ -52,6 +74,11 @@ export const resolveAlert = async (alertId, resolutionNote) => {
 
   return handleResponse(response);
 };
+
+// =========================
+// INCIDENTS
+// =========================
+
 export const getIncidents = async () => {
   const response = await fetch(`${API_BASE_URL}/incidents`);
   return handleResponse(response);
@@ -90,10 +117,25 @@ export const updateIncidentStatus = async (
 
   return handleResponse(response);
 };
+
+// =========================
+// ACTIVITY LOGS
+// =========================
+
 export const getActivities = async () => {
   const response = await fetch(`${API_BASE_URL}/activity`);
   return handleResponse(response);
 };
+
+// =========================
+// REPORTS
+// =========================
+
+export const getSecurityReport = async () => {
+  const response = await fetch(`${API_BASE_URL}/reports`);
+  return handleResponse(response);
+};
+
 export const downloadFindingsCsv = async () => {
   const response = await fetch(
     `${API_BASE_URL}/reports/findings.csv`
@@ -107,6 +149,7 @@ export const downloadFindingsCsv = async () => {
   const downloadUrl = URL.createObjectURL(csvBlob);
 
   const anchor = document.createElement("a");
+
   anchor.href = downloadUrl;
   anchor.download = "cloudguard-findings-report.csv";
 
@@ -116,8 +159,3 @@ export const downloadFindingsCsv = async () => {
 
   URL.revokeObjectURL(downloadUrl);
 };
-export const getSecurityReport = async () => {
-  const response = await fetch(`${API_BASE_URL}/reports`);
-  return handleResponse(response);
-};
-

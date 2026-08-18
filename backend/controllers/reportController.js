@@ -2,70 +2,148 @@ const {
   buildSecurityReport,
 } = require("../services/reportService");
 
-const getSecurityReport = (req, res) => {
-  const report = buildSecurityReport();
+// ========================================
+// GET SECURITY REPORT
+// ========================================
 
-  return res.status(200).json(report);
+const getSecurityReport = async (
+  req,
+  res
+) => {
+  try {
+    const report =
+      await buildSecurityReport();
+
+    return res.status(200).json(
+      report
+    );
+  } catch (error) {
+    console.error(
+      "Unable to generate security report:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Unable to generate live Azure security report.",
+
+      error:
+        error.message,
+    });
+  }
 };
 
-const downloadFindingsCsv = (req, res) => {
-  const report = buildSecurityReport();
+// ========================================
+// DOWNLOAD FINDINGS CSV
+// ========================================
 
-  const escapeCsvValue = (value) => {
-    const stringValue = String(value ?? "");
+const downloadFindingsCsv = async (
+  req,
+  res
+) => {
+  try {
+    const report =
+      await buildSecurityReport();
 
-    if (
-      stringValue.includes(",") ||
-      stringValue.includes('"') ||
-      stringValue.includes("\n")
-    ) {
-      return `"${stringValue.replace(/"/g, '""')}"`;
-    }
+    const escapeCsvValue = (
+      value
+    ) => {
+      const stringValue =
+        String(value ?? "");
 
-    return stringValue;
-  };
+      if (
+        stringValue.includes(",") ||
+        stringValue.includes('"') ||
+        stringValue.includes("\n")
+      ) {
+        return `"${stringValue.replace(
+          /"/g,
+          '""'
+        )}"`;
+      }
 
-  const headers = [
-    "Rule ID",
-    "Finding",
-    "Severity",
-    "Resource",
-    "Resource Type",
-    "Resource Group",
-    "Region",
-    "Risk Points",
-    "Recommendation",
-  ];
+      return stringValue;
+    };
 
-  const rows = report.findings.map((finding) => [
-    finding.ruleId,
-    finding.title,
-    finding.severity,
-    finding.resourceName,
-    finding.resourceType,
-    finding.resourceGroup,
-    finding.region,
-    finding.points,
-    finding.recommendation,
-  ]);
+    const headers = [
+      "Rule ID",
+      "Finding",
+      "Severity",
+      "Resource",
+      "Resource Type",
+      "Azure Type",
+      "Resource Group",
+      "Region",
+      "Risk Points",
+      "Recommendation",
+      "Source",
+    ];
 
-  const csv = [
-    headers,
-    ...rows,
-  ]
-    .map((row) =>
-      row.map(escapeCsvValue).join(",")
-    )
-    .join("\n");
+    const rows =
+      report.findings.map(
+        (finding) => [
+          finding.ruleId,
+          finding.finding,
+          finding.severity,
+          finding.resourceName,
+          finding.resourceType,
+          finding.azureType,
+          finding.resourceGroup,
+          finding.region,
+          finding.riskPoints ??
+            finding.points ??
+            0,
+          finding.recommendation,
+          finding.source,
+        ]
+      );
 
-  res.setHeader("Content-Type", "text/csv; charset=utf-8");
-res.setHeader(
-  "Content-Disposition",
-  'attachment; filename="cloudguard-findings-report.csv"'
-);
-res.setHeader("Content-Length", Buffer.byteLength(csv, "utf8"));
+    const csv = [
+      headers,
+      ...rows,
+    ]
+      .map((row) =>
+        row
+          .map(escapeCsvValue)
+          .join(",")
+      )
+      .join("\n");
 
-return res.status(200).send(csv);
+    res.setHeader(
+      "Content-Type",
+      "text/csv; charset=utf-8"
+    );
+
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="cloudguard-azure-findings-report.csv"'
+    );
+
+    res.setHeader(
+      "Content-Length",
+      Buffer.byteLength(
+        csv,
+        "utf8"
+      )
+    );
+
+    return res
+      .status(200)
+      .send(csv);
+  } catch (error) {
+    console.error(
+      "Unable to generate CSV report:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Unable to generate Azure findings CSV.",
+
+      error:
+        error.message,
+    });
+  }
 };
 
 module.exports = {

@@ -8,6 +8,7 @@ const alertRoutes = require("./routes/alertRoutes");
 const incidentRoutes = require("./routes/incidentRoutes");
 const activityRoutes = require("./routes/activityRoutes");
 const reportRoutes = require("./routes/reportRoutes");
+const azureRoutes = require("./routes/azureRoutes");
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.use("/api/alerts", alertRoutes);
 app.use("/api/incidents", incidentRoutes);
 app.use("/api/activity", activityRoutes);
 app.use("/api/reports", reportRoutes);  
+app.use("/api/azure", azureRoutes);
 
 const PORT = process.env.PORT || 5000;
 
