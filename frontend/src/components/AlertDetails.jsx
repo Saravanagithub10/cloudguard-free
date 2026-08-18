@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 function AlertDetails({
   alert,
@@ -8,16 +8,14 @@ function AlertDetails({
 }) {
   const [resolutionNote, setResolutionNote] = useState("");
 
-  useEffect(() => {
-    setResolutionNote("");
-  }, [alert?.id]);
-
   if (!alert) {
     return (
       <article className="panel alert-details-panel">
         <div className="empty-state">
           <h3>Select an alert</h3>
-          <p>Choose an alert to view incident-response details.</p>
+          <p>
+            Choose an alert to view incident-response details.
+          </p>
         </div>
       </article>
     );
@@ -35,22 +33,40 @@ function AlertDetails({
       return;
     }
 
-    const success = await onResolve(alert.id, cleanNote);
+    const success = await onResolve(
+      alert.id,
+      cleanNote
+    );
 
     if (success) {
       setResolutionNote("");
     }
   };
 
-  const emailStatus = alert.emailNotificationSent
-    ? "Sent"
-    : "Not Sent";
+  const emailStatus =
+    alert.emailNotificationSent
+      ? "Sent"
+      : "Not Sent";
+
+  const severityClass = (
+    alert.severity || "Low"
+  )
+    .toLowerCase()
+    .replaceAll(" ", "-");
+
+  const statusClass = (
+    alert.status || "Active"
+  )
+    .toLowerCase()
+    .replaceAll(" ", "-");
 
   return (
     <article className="panel alert-details-panel">
       <div className="panel-heading">
         <div>
-          <p className="eyebrow">Incident Response</p>
+          <p className="eyebrow">
+            Incident Response
+          </p>
 
           <h2>{alert.title}</h2>
 
@@ -59,15 +75,13 @@ function AlertDetails({
 
         <div className="alert-details-badges">
           <span
-            className={`severity-badge ${alert.severity.toLowerCase()}`}
+            className={`severity-badge ${severityClass}`}
           >
             {alert.severity}
           </span>
 
           <span
-            className={`alert-status ${alert.status
-              .toLowerCase()
-              .replaceAll(" ", "-")}`}
+            className={`alert-status ${statusClass}`}
           >
             {alert.status}
           </span>
@@ -77,38 +91,54 @@ function AlertDetails({
       <div className="finding-summary">
         <div>
           <span>Resource</span>
-          <strong>{alert.resourceName}</strong>
+          <strong>
+            {alert.resourceName || "—"}
+          </strong>
         </div>
 
         <div>
           <span>Resource Type</span>
-          <strong>{alert.resourceType}</strong>
+          <strong>
+            {alert.resourceType || "—"}
+          </strong>
         </div>
 
         <div>
           <span>Resource Group</span>
-          <strong>{alert.resourceGroup}</strong>
+          <strong>
+            {alert.resourceGroup || "—"}
+          </strong>
         </div>
 
         <div>
           <span>Region</span>
-          <strong>{alert.region || "—"}</strong>
+          <strong>
+            {alert.region || "—"}
+          </strong>
         </div>
 
         <div>
           <span>Rule ID</span>
-          <strong>{alert.ruleId || "—"}</strong>
+          <strong>
+            {alert.ruleId || "—"}
+          </strong>
         </div>
 
         <div>
           <span>Risk Points</span>
-          <strong>{alert.riskPoints}</strong>
+          <strong>
+            {alert.riskPoints ?? 0}
+          </strong>
         </div>
       </div>
 
       <section className="alert-recommendation">
         <h3>Recommendation</h3>
-        <p>{alert.recommendation}</p>
+
+        <p>
+          {alert.recommendation ||
+            "Review the detected security configuration."}
+        </p>
       </section>
 
       <section className="alert-recommendation">
@@ -116,7 +146,10 @@ function AlertDetails({
 
         <div className="system-row">
           <span>Status</span>
-          <strong>{emailStatus}</strong>
+
+          <strong>
+            {emailStatus}
+          </strong>
         </div>
 
         <div className="system-row">
@@ -124,7 +157,9 @@ function AlertDetails({
 
           <strong>
             {alert.emailNotifiedAt
-              ? new Date(alert.emailNotifiedAt).toLocaleString()
+              ? new Date(
+                  alert.emailNotifiedAt
+                ).toLocaleString()
               : "—"}
           </strong>
         </div>
@@ -132,7 +167,10 @@ function AlertDetails({
         {alert.notificationError && (
           <div className="system-row">
             <span>Error</span>
-            <strong>{alert.notificationError}</strong>
+
+            <strong>
+              {alert.notificationError}
+            </strong>
           </div>
         )}
       </section>
@@ -141,17 +179,28 @@ function AlertDetails({
         <button
           type="button"
           className="primary-button"
-          disabled={!canAcknowledge || actionLoading}
-          onClick={() => onAcknowledge(alert.id)}
+          disabled={
+            !canAcknowledge ||
+            actionLoading
+          }
+          onClick={() =>
+            onAcknowledge(alert.id)
+          }
         >
-          {actionLoading && canAcknowledge
+          {actionLoading &&
+          canAcknowledge
             ? "Processing..."
             : "Acknowledge Alert"}
         </button>
       </div>
 
-      <form className="resolve-form" onSubmit={handleResolve}>
-        <label htmlFor="resolution-note">Resolution note</label>
+      <form
+        className="resolve-form"
+        onSubmit={handleResolve}
+      >
+        <label htmlFor="resolution-note">
+          Resolution note
+        </label>
 
         <textarea
           id="resolution-note"
@@ -162,9 +211,14 @@ function AlertDetails({
               : "Acknowledge the alert before resolving it."
           }
           value={resolutionNote}
-          disabled={!canResolve || actionLoading}
+          disabled={
+            !canResolve ||
+            actionLoading
+          }
           onChange={(event) =>
-            setResolutionNote(event.target.value)
+            setResolutionNote(
+              event.target.value
+            )
           }
         />
 
@@ -177,7 +231,8 @@ function AlertDetails({
             actionLoading
           }
         >
-          {actionLoading && canResolve
+          {actionLoading &&
+          canResolve
             ? "Resolving..."
             : "Resolve Alert"}
         </button>
@@ -187,12 +242,17 @@ function AlertDetails({
         <section className="resolution-summary">
           <h3>Resolution</h3>
 
-          <p>{alert.resolutionNote}</p>
+          <p>
+            {alert.resolutionNote ||
+              "No resolution note available."}
+          </p>
 
           <span>
             Resolved at:{" "}
             {alert.resolvedAt
-              ? new Date(alert.resolvedAt).toLocaleString()
+              ? new Date(
+                  alert.resolvedAt
+                ).toLocaleString()
               : "—"}
           </span>
         </section>
@@ -202,29 +262,45 @@ function AlertDetails({
         <h3>Activity Timeline</h3>
 
         <div className="activity-timeline">
-          {(Array.isArray(alert.activity)
-            ? alert.activity
-            : []
-          ).map((item, index) => (
-            <article
-              className="activity-item"
-              key={`${item.action}-${item.timestamp}-${index}`}
-            >
-              <span className="activity-dot"></span>
+          {Array.isArray(
+            alert.activity
+          ) &&
+          alert.activity.length > 0 ? (
+            alert.activity.map(
+              (item, index) => (
+                <article
+                  className="activity-item"
+                  key={`${item.action}-${item.timestamp}-${index}`}
+                >
+                  <span className="activity-dot"></span>
 
-              <div>
-                <strong>{item.action}</strong>
+                  <div>
+                    <strong>
+                      {item.action}
+                    </strong>
 
-                <p>{item.message}</p>
+                    <p>
+                      {item.message}
+                    </p>
 
-                <time>
-                  {item.timestamp
-                    ? new Date(item.timestamp).toLocaleString()
-                    : "—"}
-                </time>
-              </div>
-            </article>
-          ))}
+                    <time>
+                      {item.timestamp
+                        ? new Date(
+                            item.timestamp
+                          ).toLocaleString()
+                        : "—"}
+                    </time>
+                  </div>
+                </article>
+              )
+            )
+          ) : (
+            <div className="empty-state small">
+              <p>
+                No activity recorded for this alert.
+              </p>
+            </div>
+          )}
         </div>
       </section>
     </article>
