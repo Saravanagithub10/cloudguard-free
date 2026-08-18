@@ -6,6 +6,7 @@ import Alerts from "./pages/Alerts";
 import Incidents from "./pages/Incidents";
 import ActivityLogs from "./pages/ActivityLogs";
 import Reports from "./pages/Reports";
+import Monitoring from "./pages/Monitoring";
 
 function App() {
   return (
@@ -52,6 +53,7 @@ function App() {
           path="*"
           element={<Navigate to="/dashboard" replace />}
         />
+        <Route path="/monitoring" element={<Monitoring />} />
       </Routes>
     </div>
   );

@@ -25,6 +25,10 @@ const navigationItems = [
     label: "Reports",
     path: "/reports",
   },
+  {
+    label: "Monitoring",
+    path: "/monitoring",
+  },
 ];
 
 function Sidebar() {

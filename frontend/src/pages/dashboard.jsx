@@ -7,15 +7,20 @@ import {
   getHealthStatus,
   getResources,
   getAlerts,
+  getMetrics,
 } from "../services/api";
 
 function Dashboard() {
   const [health, setHealth] = useState(null);
+
   const [resources, setResources] = useState([]);
   const [selectedResource, setSelectedResource] = useState(null);
 
   const [alerts, setAlerts] = useState([]);
   const [alertSummary, setAlertSummary] = useState(null);
+
+  const [monitorData, setMonitorData] = useState(null);
+  const [monitorError, setMonitorError] = useState("");
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -27,35 +32,64 @@ function Dashboard() {
       try {
         setLoading(true);
         setError("");
+        setMonitorError("");
 
-        const [healthData, resourceData, alertData] =
-          await Promise.all([
-            getHealthStatus(),
-            getResources(),
-            getAlerts(),
-          ]);
+        const [
+          healthResult,
+          resourceResult,
+          alertResult,
+          metricsResult,
+        ] = await Promise.allSettled([
+          getHealthStatus(),
+          getResources(),
+          getAlerts(),
+          getMetrics(),
+        ]);
 
         if (cancelled) {
           return;
         }
 
-        const receivedResources = Array.isArray(
-          resourceData?.resources
-        )
-          ? resourceData.resources
-          : [];
+        if (healthResult.status === "fulfilled") {
+          setHealth(healthResult.value);
+        }
 
-        const receivedAlerts = Array.isArray(alertData?.alerts)
-          ? alertData.alerts
-          : [];
+        if (resourceResult.status === "fulfilled") {
+          const receivedResources = Array.isArray(
+            resourceResult.value?.resources
+          )
+            ? resourceResult.value.resources
+            : [];
 
-        setHealth(healthData);
+          setResources(receivedResources);
+          setSelectedResource(receivedResources[0] || null);
+        } else {
+          throw resourceResult.reason;
+        }
 
-        setResources(receivedResources);
-        setSelectedResource(receivedResources[0] || null);
+        if (alertResult.status === "fulfilled") {
+          const receivedAlerts = Array.isArray(
+            alertResult.value?.alerts
+          )
+            ? alertResult.value.alerts
+            : [];
 
-        setAlerts(receivedAlerts);
-        setAlertSummary(alertData?.summary || null);
+          setAlerts(receivedAlerts);
+          setAlertSummary(
+            alertResult.value?.summary || null
+          );
+        } else {
+          throw alertResult.reason;
+        }
+
+        if (metricsResult.status === "fulfilled") {
+          setMonitorData(metricsResult.value);
+        } else {
+          setMonitorError(
+            metricsResult.reason?.message ||
+              "Azure Monitor metrics unavailable."
+          );
+        }
       } catch (requestError) {
         if (!cancelled) {
           setError(
@@ -157,12 +191,6 @@ function Dashboard() {
     };
   }, [resources]);
 
-  const apiStatus = loading
-    ? "Checking..."
-    : error
-      ? "Offline"
-      : health?.status || "Unknown";
-
   const scannedResources = useMemo(
     () =>
       resources.filter(
@@ -171,6 +199,40 @@ function Dashboard() {
       ),
     [resources]
   );
+
+  const metrics = monitorData?.metrics || {};
+
+  const responseTimeMs = useMemo(() => {
+    const seconds = metrics.responseTimeSeconds;
+
+    if (typeof seconds !== "number") {
+      return 0;
+    }
+
+    return seconds * 1000;
+  }, [metrics.responseTimeSeconds]);
+
+  const memoryMiB = useMemo(() => {
+    const bytes = metrics.memoryWorkingSetBytes;
+
+    if (typeof bytes !== "number") {
+      return 0;
+    }
+
+    return bytes / (1024 * 1024);
+  }, [metrics.memoryWorkingSetBytes]);
+
+  const apiStatus = loading
+    ? "Checking..."
+    : error
+      ? "Offline"
+      : health?.status || "Unknown";
+
+  const monitoringStatus = monitorError
+    ? "Unavailable"
+    : monitorData
+      ? "Connected"
+      : "Checking...";
 
   return (
     <main className="dashboard">
@@ -183,8 +245,8 @@ function Dashboard() {
           <h1>CloudGuard Overview</h1>
 
           <span>
-            Monitor real Azure resources, security findings
-            and incident-response activity.
+            Monitor real Azure resources, security findings,
+            alerts and Azure Monitor telemetry.
           </span>
         </div>
 
@@ -223,6 +285,32 @@ function Dashboard() {
           description={`${
             alertSummary?.criticalAlerts ?? 0
           } critical alerts`}
+        />
+      </section>
+
+      <section className="stats-grid">
+        <StatCard
+          title="Requests (1h)"
+          value={metrics.requests ?? 0}
+          description="Azure Monitor request volume"
+        />
+
+        <StatCard
+          title="HTTP 5xx"
+          value={metrics.http5xx ?? 0}
+          description="Server errors during the last hour"
+        />
+
+        <StatCard
+          title="Response Time"
+          value={`${responseTimeMs.toFixed(2)} ms`}
+          description="Average Azure App Service response time"
+        />
+
+        <StatCard
+          title="Monitoring"
+          value={monitoringStatus}
+          description="Azure Monitor connection status"
         />
       </section>
 
@@ -281,7 +369,7 @@ function Dashboard() {
               <h2>System Information</h2>
 
               <p>
-                CloudGuard service and Azure scan status.
+                CloudGuard service and Azure integration status.
               </p>
             </div>
           </div>
@@ -306,8 +394,13 @@ function Dashboard() {
           </div>
 
           <div className="system-row">
-            <span>Data Source</span>
+            <span>Resource Source</span>
             <strong>Azure Resource Graph</strong>
+          </div>
+
+          <div className="system-row">
+            <span>Monitoring Source</span>
+            <strong>Azure Monitor</strong>
           </div>
 
           <div className="system-row">
@@ -330,6 +423,11 @@ function Dashboard() {
           </div>
 
           <div className="system-row">
+            <span>Azure Monitor</span>
+            <strong>{monitoringStatus}</strong>
+          </div>
+
+          <div className="system-row">
             <span>Last Checked</span>
             <strong>
               {health?.timestamp
@@ -341,6 +439,50 @@ function Dashboard() {
           </div>
         </article>
       </section>
+
+      <article className="panel monitoring-chart-panel">
+        <div className="panel-heading">
+          <div>
+            <h2>Azure Monitor Snapshot</h2>
+
+            <p>
+              Operational telemetry from the monitored
+              Azure App Service during the last hour.
+            </p>
+          </div>
+        </div>
+
+        {monitorError ? (
+          <div className="empty-state small">
+            <h3>Monitoring unavailable</h3>
+            <p>{monitorError}</p>
+          </div>
+        ) : (
+          <div className="finding-summary">
+            <div>
+              <span>Requests</span>
+              <strong>{metrics.requests ?? 0}</strong>
+            </div>
+
+            <div>
+              <span>HTTP 4xx</span>
+              <strong>{metrics.http4xx ?? 0}</strong>
+            </div>
+
+            <div>
+              <span>HTTP 5xx</span>
+              <strong>{metrics.http5xx ?? 0}</strong>
+            </div>
+
+            <div>
+              <span>Memory</span>
+              <strong>
+                {memoryMiB.toFixed(2)} MiB
+              </strong>
+            </div>
+          </div>
+        )}
+      </article>
 
       <article className="panel resources-panel">
         <div className="panel-heading">
@@ -394,8 +536,8 @@ function Dashboard() {
             <h2>Recent Security Alerts</h2>
 
             <p>
-              Alerts generated from CloudGuard security
-              findings.
+              Alerts generated from live CloudGuard
+              security findings.
             </p>
           </div>
         </div>

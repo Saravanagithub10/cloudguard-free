@@ -1,8 +1,19 @@
 const crypto = require("crypto");
+
 const alerts = require("../data/alertStore");
+
 const {
   getAzureResources,
 } = require("./azureResourceService");
+
+const {
+  sendSecurityAlertEmail,
+} = require("./notificationService");
+
+const {
+  getAlertState,
+  saveAlertsState,
+} = require("./alertStateService");
 
 const createResourceKey = (resourceId) => {
   return crypto
@@ -12,8 +23,14 @@ const createResourceKey = (resourceId) => {
     .slice(0, 8);
 };
 
-const createAlertId = (resource, finding) => {
-  const resourceKey = createResourceKey(resource.id);
+const createAlertId = (
+  resource,
+  finding
+) => {
+  const resourceKey =
+    createResourceKey(
+      resource.id
+    );
 
   return `ALT-${resourceKey}-${finding.ruleId}`;
 };
@@ -22,7 +39,11 @@ const buildAlertFromFinding = (
   resource,
   finding
 ) => {
-  const id = createAlertId(resource, finding);
+  const id =
+    createAlertId(
+      resource,
+      finding
+    );
 
   return {
     id,
@@ -33,7 +54,8 @@ const buildAlertFromFinding = (
       "Security finding",
 
     severity:
-      finding.severity || "Low",
+      finding.severity ||
+      "Low",
 
     resourceId:
       resource.id,
@@ -53,7 +75,8 @@ const buildAlertFromFinding = (
     azureType:
       resource.azureType,
 
-    status: "Active",
+    status:
+      "Active",
 
     recommendation:
       finding.recommendation ||
@@ -82,94 +105,259 @@ const buildAlertFromFinding = (
     resolutionNote:
       "",
 
-    activity: [],
+    emailNotificationSent:
+      false,
+
+    emailNotifiedAt:
+      null,
+
+    notificationError:
+      null,
+
+    activity:
+      [],
+  };
+};
+
+const shouldSendEmail = (
+  alert
+) => {
+  return (
+    alert.severity === "High" ||
+    alert.severity === "Critical"
+  );
+};
+
+const mergeSavedState = (
+  generatedAlert
+) => {
+  const savedState =
+    getAlertState(
+      generatedAlert.id
+    );
+
+  if (!savedState) {
+    return null;
+  }
+
+  return {
+    ...generatedAlert,
+
+    status:
+      savedState.status ||
+      generatedAlert.status,
+
+    createdAt:
+      savedState.createdAt ||
+      generatedAlert.createdAt,
+
+    acknowledgedAt:
+      savedState.acknowledgedAt ??
+      null,
+
+    resolvedAt:
+      savedState.resolvedAt ??
+      null,
+
+    resolutionNote:
+      savedState.resolutionNote ||
+      "",
+
+    emailNotificationSent:
+      savedState.emailNotificationSent ??
+      false,
+
+    emailNotifiedAt:
+      savedState.emailNotifiedAt ??
+      null,
+
+    notificationError:
+      savedState.notificationError ??
+      null,
+
+    activity:
+      Array.isArray(
+        savedState.activity
+      )
+        ? savedState.activity
+        : [],
   };
 };
 
 const synchronizeAzureAlerts = async () => {
-  const resources = await getAzureResources();
+  const resources =
+    await getAzureResources();
 
-  const generatedAlerts = resources.flatMap(
-    (resource) => {
-      const findings = Array.isArray(
-        resource.findings
-      )
-        ? resource.findings
-        : [];
+  const generatedAlerts =
+    resources.flatMap(
+      (resource) => {
+        const findings =
+          Array.isArray(
+            resource.findings
+          )
+            ? resource.findings
+            : [];
 
-      return findings.map((finding) =>
-        buildAlertFromFinding(
-          resource,
-          finding
-        )
-      );
-    }
-  );
+        return findings.map(
+          (finding) =>
+            buildAlertFromFinding(
+              resource,
+              finding
+            )
+        );
+      }
+    );
 
   const synchronizedAlerts =
-    generatedAlerts.map((generatedAlert) => {
-      const existingAlert = alerts.find(
+    [];
+
+  for (
+    const generatedAlert
+    of generatedAlerts
+  ) {
+    const existingAlert =
+      alerts.find(
         (alert) =>
-          alert.id === generatedAlert.id
+          alert.id ===
+          generatedAlert.id
       );
 
-      // Existing alert found:
-      // preserve analyst workflow state.
-      if (existingAlert) {
-        return {
-          ...generatedAlert,
+    let alert;
 
-          status:
-            existingAlert.status,
-
-          createdAt:
-            existingAlert.createdAt,
-
-          acknowledgedAt:
-            existingAlert.acknowledgedAt,
-
-          resolvedAt:
-            existingAlert.resolvedAt,
-
-          resolutionNote:
-            existingAlert.resolutionNote,
-
-          activity:
-            Array.isArray(
-              existingAlert.activity
-            )
-              ? existingAlert.activity
-              : [],
-        };
-      }
-
-      const timestamp =
-        generatedAlert.createdAt;
-
-      return {
+    if (existingAlert) {
+      alert = {
         ...generatedAlert,
 
-        activity: [
-          {
-            action: "Created",
+        status:
+          existingAlert.status,
 
-            message:
-              "Alert generated from a live Azure security finding.",
+        createdAt:
+          existingAlert.createdAt,
 
-            timestamp,
-          },
-        ],
+        acknowledgedAt:
+          existingAlert.acknowledgedAt,
+
+        resolvedAt:
+          existingAlert.resolvedAt,
+
+        resolutionNote:
+          existingAlert.resolutionNote,
+
+        emailNotificationSent:
+          existingAlert.emailNotificationSent ??
+          false,
+
+        emailNotifiedAt:
+          existingAlert.emailNotifiedAt ??
+          null,
+
+        notificationError:
+          existingAlert.notificationError ??
+          null,
+
+        activity:
+          Array.isArray(
+            existingAlert.activity
+          )
+            ? existingAlert.activity
+            : [],
       };
-    });
+    } else {
+      const persistedAlert =
+        mergeSavedState(
+          generatedAlert
+        );
 
-  // Important:
-  // mutate the same exported array instead of
-  // replacing it, because other modules require
-  // this exact array reference.
+      if (persistedAlert) {
+        alert =
+          persistedAlert;
+      } else {
+        const timestamp =
+          generatedAlert.createdAt;
+
+        alert = {
+          ...generatedAlert,
+
+          activity: [
+            {
+              action:
+                "Created",
+
+              message:
+                "Alert generated from a live Azure security finding.",
+
+              timestamp,
+            },
+          ],
+        };
+      }
+    }
+
+    if (
+      shouldSendEmail(alert) &&
+      !alert.emailNotificationSent
+    ) {
+      try {
+        await sendSecurityAlertEmail(
+          alert
+        );
+
+        const timestamp =
+          new Date().toISOString();
+
+        alert.emailNotificationSent =
+          true;
+
+        alert.emailNotifiedAt =
+          timestamp;
+
+        alert.notificationError =
+          null;
+
+        alert.activity.push({
+          action:
+            "Email Notification Sent",
+
+          message:
+            "High-severity security alert notification sent by email.",
+
+          timestamp,
+        });
+      } catch (error) {
+        console.error(
+          `Email notification failed for ${alert.id}:`,
+          error.message
+        );
+
+        alert.notificationError =
+          error.message;
+
+        alert.activity.push({
+          action:
+            "Email Notification Failed",
+
+          message:
+            error.message,
+
+          timestamp:
+            new Date().toISOString(),
+        });
+      }
+    }
+
+    synchronizedAlerts.push(
+      alert
+    );
+  }
+
   alerts.splice(
     0,
     alerts.length,
     ...synchronizedAlerts
+  );
+
+  saveAlertsState(
+    synchronizedAlerts
   );
 
   return alerts;

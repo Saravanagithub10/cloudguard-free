@@ -1,8 +1,13 @@
-const alerts = require("../data/alertStore");
+const alerts =
+  require("../data/alertStore");
 
 const {
   synchronizeAzureAlerts,
 } = require("../services/liveAlertService");
+
+const {
+  saveAlertState,
+} = require("../services/alertStateService");
 
 const buildAlertSummary = () => ({
   totalAlerts:
@@ -17,7 +22,8 @@ const buildAlertSummary = () => ({
   acknowledgedAlerts:
     alerts.filter(
       (alert) =>
-        alert.status === "Acknowledged"
+        alert.status ===
+        "Acknowledged"
     ).length,
 
   resolvedAlerts:
@@ -29,33 +35,40 @@ const buildAlertSummary = () => ({
   criticalAlerts:
     alerts.filter(
       (alert) =>
-        alert.severity === "Critical"
+        alert.severity ===
+        "Critical"
     ).length,
 
   highAlerts:
     alerts.filter(
       (alert) =>
-        alert.severity === "High"
+        alert.severity ===
+        "High"
     ).length,
 
   mediumAlerts:
     alerts.filter(
       (alert) =>
-        alert.severity === "Medium"
+        alert.severity ===
+        "Medium"
     ).length,
 
   lowAlerts:
     alerts.filter(
       (alert) =>
-        alert.severity === "Low"
+        alert.severity ===
+        "Low"
     ).length,
 });
 
-// ================================
-// GET ALL LIVE AZURE ALERTS
-// ================================
+// ========================================
+// GET ALL ALERTS
+// ========================================
 
-const getAlerts = async (req, res) => {
+const getAlerts = async (
+  req,
+  res
+) => {
   try {
     await synchronizeAzureAlerts();
 
@@ -84,9 +97,9 @@ const getAlerts = async (req, res) => {
   }
 };
 
-// ================================
+// ========================================
 // GET ALERT BY ID
-// ================================
+// ========================================
 
 const getAlertById = async (
   req,
@@ -95,10 +108,12 @@ const getAlertById = async (
   try {
     await synchronizeAzureAlerts();
 
-    const alert = alerts.find(
-      (item) =>
-        item.id === req.params.id
-    );
+    const alert =
+      alerts.find(
+        (item) =>
+          item.id ===
+          req.params.id
+      );
 
     if (!alert) {
       return res.status(404).json({
@@ -126,9 +141,9 @@ const getAlertById = async (
   }
 };
 
-// ================================
+// ========================================
 // ACKNOWLEDGE ALERT
-// ================================
+// ========================================
 
 const acknowledgeAlert = async (
   req,
@@ -137,10 +152,12 @@ const acknowledgeAlert = async (
   try {
     await synchronizeAzureAlerts();
 
-    const alert = alerts.find(
-      (item) =>
-        item.id === req.params.id
-    );
+    const alert =
+      alerts.find(
+        (item) =>
+          item.id ===
+          req.params.id
+      );
 
     if (!alert) {
       return res.status(404).json({
@@ -150,7 +167,8 @@ const acknowledgeAlert = async (
     }
 
     if (
-      alert.status === "Resolved"
+      alert.status ===
+      "Resolved"
     ) {
       return res.status(400).json({
         message:
@@ -195,6 +213,10 @@ const acknowledgeAlert = async (
       timestamp,
     });
 
+    saveAlertState(
+      alert
+    );
+
     return res.status(200).json({
       message:
         "Alert acknowledged successfully.",
@@ -220,9 +242,9 @@ const acknowledgeAlert = async (
   }
 };
 
-// ================================
+// ========================================
 // RESOLVE ALERT
-// ================================
+// ========================================
 
 const resolveAlert = async (
   req,
@@ -231,10 +253,12 @@ const resolveAlert = async (
   try {
     await synchronizeAzureAlerts();
 
-    const alert = alerts.find(
-      (item) =>
-        item.id === req.params.id
-    );
+    const alert =
+      alerts.find(
+        (item) =>
+          item.id ===
+          req.params.id
+      );
 
     if (!alert) {
       return res.status(404).json({
@@ -244,7 +268,8 @@ const resolveAlert = async (
     }
 
     if (
-      alert.status === "Resolved"
+      alert.status ===
+      "Resolved"
     ) {
       return res.status(400).json({
         message:
@@ -305,6 +330,10 @@ const resolveAlert = async (
 
       timestamp,
     });
+
+    saveAlertState(
+      alert
+    );
 
     return res.status(200).json({
       message:

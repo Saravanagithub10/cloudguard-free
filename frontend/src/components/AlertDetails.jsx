@@ -1,12 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function AlertDetails({
   alert,
   onAcknowledge,
   onResolve,
-  actionLoading = false,
+  actionLoading,
 }) {
   const [resolutionNote, setResolutionNote] = useState("");
+
+  useEffect(() => {
+    setResolutionNote("");
+  }, [alert?.id]);
 
   if (!alert) {
     return (
@@ -21,20 +25,13 @@ function AlertDetails({
 
   const canAcknowledge = alert.status === "Active";
   const canResolve = alert.status === "Acknowledged";
-  const activity = Array.isArray(alert.activity) ? alert.activity : [];
-
-  const handleAcknowledge = () => {
-    if (typeof onAcknowledge === "function") {
-      onAcknowledge(alert.id);
-    }
-  };
 
   const handleResolve = async (event) => {
     event.preventDefault();
 
     const cleanNote = resolutionNote.trim();
 
-    if (!cleanNote || typeof onResolve !== "function") {
+    if (!cleanNote) {
       return;
     }
 
@@ -45,30 +42,34 @@ function AlertDetails({
     }
   };
 
+  const emailStatus = alert.emailNotificationSent
+    ? "Sent"
+    : "Not Sent";
+
   return (
     <article className="panel alert-details-panel">
       <div className="panel-heading">
         <div>
           <p className="eyebrow">Incident Response</p>
-          <h2>{alert.title || "Security Alert"}</h2>
-          <p>{alert.id || "—"}</p>
+
+          <h2>{alert.title}</h2>
+
+          <p>{alert.id}</p>
         </div>
 
         <div className="alert-details-badges">
           <span
-            className={`severity-badge ${
-              alert.severity?.toLowerCase().replace(/\s+/g, "-") || "low"
-            }`}
+            className={`severity-badge ${alert.severity.toLowerCase()}`}
           >
-            {alert.severity || "Unknown"}
+            {alert.severity}
           </span>
 
           <span
-            className={`alert-status ${
-              alert.status?.toLowerCase().replace(/\s+/g, "-") || "active"
-            }`}
+            className={`alert-status ${alert.status
+              .toLowerCase()
+              .replaceAll(" ", "-")}`}
           >
-            {alert.status || "Unknown"}
+            {alert.status}
           </span>
         </div>
       </div>
@@ -76,28 +77,64 @@ function AlertDetails({
       <div className="finding-summary">
         <div>
           <span>Resource</span>
-          <strong>{alert.resourceName || "—"}</strong>
+          <strong>{alert.resourceName}</strong>
         </div>
 
         <div>
           <span>Resource Type</span>
-          <strong>{alert.resourceType || "—"}</strong>
+          <strong>{alert.resourceType}</strong>
         </div>
 
         <div>
           <span>Resource Group</span>
-          <strong>{alert.resourceGroup || "—"}</strong>
+          <strong>{alert.resourceGroup}</strong>
+        </div>
+
+        <div>
+          <span>Region</span>
+          <strong>{alert.region || "—"}</strong>
+        </div>
+
+        <div>
+          <span>Rule ID</span>
+          <strong>{alert.ruleId || "—"}</strong>
         </div>
 
         <div>
           <span>Risk Points</span>
-          <strong>{alert.riskPoints ?? 0}</strong>
+          <strong>{alert.riskPoints}</strong>
         </div>
       </div>
 
       <section className="alert-recommendation">
         <h3>Recommendation</h3>
-        <p>{alert.recommendation || "No recommendation available."}</p>
+        <p>{alert.recommendation}</p>
+      </section>
+
+      <section className="alert-recommendation">
+        <h3>Email Notification</h3>
+
+        <div className="system-row">
+          <span>Status</span>
+          <strong>{emailStatus}</strong>
+        </div>
+
+        <div className="system-row">
+          <span>Notified At</span>
+
+          <strong>
+            {alert.emailNotifiedAt
+              ? new Date(alert.emailNotifiedAt).toLocaleString()
+              : "—"}
+          </strong>
+        </div>
+
+        {alert.notificationError && (
+          <div className="system-row">
+            <span>Error</span>
+            <strong>{alert.notificationError}</strong>
+          </div>
+        )}
       </section>
 
       <div className="alert-actions">
@@ -105,7 +142,7 @@ function AlertDetails({
           type="button"
           className="primary-button"
           disabled={!canAcknowledge || actionLoading}
-          onClick={handleAcknowledge}
+          onClick={() => onAcknowledge(alert.id)}
         >
           {actionLoading && canAcknowledge
             ? "Processing..."
@@ -118,7 +155,7 @@ function AlertDetails({
 
         <textarea
           id="resolution-note"
-          rows={4}
+          rows="4"
           placeholder={
             canResolve
               ? "Explain the remediation action completed..."
@@ -126,7 +163,9 @@ function AlertDetails({
           }
           value={resolutionNote}
           disabled={!canResolve || actionLoading}
-          onChange={(event) => setResolutionNote(event.target.value)}
+          onChange={(event) =>
+            setResolutionNote(event.target.value)
+          }
         />
 
         <button
@@ -134,7 +173,7 @@ function AlertDetails({
           className="resolve-button"
           disabled={
             !canResolve ||
-            resolutionNote.trim().length === 0 ||
+            !resolutionNote.trim() ||
             actionLoading
           }
         >
@@ -148,7 +187,7 @@ function AlertDetails({
         <section className="resolution-summary">
           <h3>Resolution</h3>
 
-          <p>{alert.resolutionNote || "No resolution note available."}</p>
+          <p>{alert.resolutionNote}</p>
 
           <span>
             Resolved at:{" "}
@@ -162,34 +201,31 @@ function AlertDetails({
       <section className="activity-section">
         <h3>Activity Timeline</h3>
 
-        {activity.length === 0 ? (
-          <div className="empty-state small">
-            <p>No activity history available.</p>
-          </div>
-        ) : (
-          <div className="activity-timeline">
-            {activity.map((item, index) => (
-              <article
-                className="activity-item"
-                key={`${item.action}-${item.timestamp}-${index}`}
-              >
-                <span className="activity-dot"></span>
+        <div className="activity-timeline">
+          {(Array.isArray(alert.activity)
+            ? alert.activity
+            : []
+          ).map((item, index) => (
+            <article
+              className="activity-item"
+              key={`${item.action}-${item.timestamp}-${index}`}
+            >
+              <span className="activity-dot"></span>
 
-                <div>
-                  <strong>{item.action || "Activity"}</strong>
+              <div>
+                <strong>{item.action}</strong>
 
-                  <p>{item.message || "No activity description."}</p>
+                <p>{item.message}</p>
 
-                  <time>
-                    {item.timestamp
-                      ? new Date(item.timestamp).toLocaleString()
-                      : "—"}
-                  </time>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
+                <time>
+                  {item.timestamp
+                    ? new Date(item.timestamp).toLocaleString()
+                    : "—"}
+                </time>
+              </div>
+            </article>
+          ))}
+        </div>
       </section>
     </article>
   );

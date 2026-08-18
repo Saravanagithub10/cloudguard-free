@@ -1,0 +1,184 @@
+{
+  "alerts": {
+    "ALT-dabc2344-AZ-SQL-001": {
+      "status": "Active",
+      "createdAt": "2026-08-18T10:38:43.940Z",
+      "acknowledgedAt": null,
+      "resolvedAt": null,
+      "resolutionNote": "",
+      "emailNotificationSent": true,
+      "emailNotifiedAt": "2026-08-18T10:38:44.498Z",
+      "notificationError": null,
+      "activity": [
+        {
+          "action": "Created",
+          "message": "Alert generated from a live Azure security finding.",
+          "timestamp": "2026-08-18T10:38:43.940Z"
+        },
+        {
+          "action": "Email Notification Sent",
+          "message": "High-severity security alert notification sent by email.",
+          "timestamp": "2026-08-18T10:38:44.498Z"
+        }
+      ]
+    },
+    "ALT-dabc2344-AZ-SQL-002": {
+      "status": "Active",
+      "createdAt": "2026-08-18T10:38:43.941Z",
+      "acknowledgedAt": null,
+      "resolvedAt": null,
+      "resolutionNote": "",
+      "emailNotificationSent": false,
+      "emailNotifiedAt": null,
+      "notificationError": null,
+      "activity": [
+        {
+          "action": "Created",
+          "message": "Alert generated from a live Azure security finding.",
+          "timestamp": "2026-08-18T10:38:43.941Z"
+        }
+      ]
+    },
+    "ALT-dabc2344-AZ-SQL-003": {
+      "status": "Active",
+      "createdAt": "2026-08-18T10:38:43.941Z",
+      "acknowledgedAt": null,
+      "resolvedAt": null,
+      "resolutionNote": "",
+      "emailNotificationSent": false,
+      "emailNotifiedAt": null,
+      "notificationError": null,
+      "activity": [
+        {
+          "action": "Created",
+          "message": "Alert generated from a live Azure security finding.",
+          "timestamp": "2026-08-18T10:38:43.941Z"
+        }
+      ]
+    },
+    "ALT-89b1c07f-AZ-SQLDB-001": {
+      "status": "Active",
+      "createdAt": "2026-08-18T10:38:43.941Z",
+      "acknowledgedAt": null,
+      "resolvedAt": null,
+      "resolutionNote": "",
+      "emailNotificationSent": false,
+      "emailNotifiedAt": null,
+      "notificationError": null,
+      "activity": [
+        {
+          "action": "Created",
+          "message": "Alert generated from a live Azure security finding.",
+          "timestamp": "2026-08-18T10:38:43.941Z"
+        }
+      ]
+    },
+    "ALT-841b9433-AZ-ST-001": {
+      "status": "Active",
+      "createdAt": "2026-08-18T10:38:43.941Z",
+      "acknowledgedAt": null,
+      "resolvedAt": null,
+      "resolutionNote": "",
+      "emailNotificationSent": false,
+      "emailNotifiedAt": null,
+      "notificationError": null,
+      "activity": [
+        {
+          "action": "Created",
+          "message": "Alert generated from a live Azure security finding.",
+          "timestamp": "2026-08-18T10:38:43.941Z"
+        }
+      ]
+    },
+    "ALT-841b9433-AZ-ST-002": {
+      "status": "Active",
+      "createdAt": "2026-08-18T10:38:43.941Z",
+      "acknowledgedAt": null,
+      "resolvedAt": null,
+      "resolutionNote": "",
+      "emailNotificationSent": true,
+      "emailNotifiedAt": "2026-08-18T10:38:44.911Z",
+      "notificationError": null,
+      "activity": [
+        {
+          "action": "Created",
+          "message": "Alert generated from a live Azure security finding.",
+          "timestamp": "2026-08-18T10:38:43.941Z"
+        },
+        {
+          "action": "Email Notification Sent",
+          "message": "High-severity security alert notification sent by email.",
+          "timestamp": "2026-08-18T10:38:44.911Z"
+        }
+      ]
+    },
+    "ALT-841b9433-AZ-ST-006": {
+      "status": "Active",
+      "createdAt": "2026-08-18T10:38:43.941Z",
+      "acknowledgedAt": null,
+      "resolvedAt": null,
+      "resolutionNote": "",
+      "emailNotificationSent": false,
+      "emailNotifiedAt": null,
+      "notificationError": null,
+      "activity": [
+        {
+          "action": "Created",
+          "message": "Alert generated from a live Azure security finding.",
+          "timestamp": "2026-08-18T10:38:43.941Z"
+        }
+      ]
+    },
+    "ALT-8dffc206-AZ-WEB-002": {
+      "status": "Active",
+      "createdAt": "2026-08-18T10:38:43.941Z",
+      "acknowledgedAt": null,
+      "resolvedAt": null,
+      "resolutionNote": "",
+      "emailNotificationSent": false,
+      "emailNotifiedAt": null,
+      "notificationError": null,
+      "activity": [
+        {
+          "action": "Created",
+          "message": "Alert generated from a live Azure security finding.",
+          "timestamp": "2026-08-18T10:38:43.941Z"
+        }
+      ]
+    },
+    "ALT-8dffc206-AZ-WEB-003": {
+      "status": "Active",
+      "createdAt": "2026-08-18T10:38:43.941Z",
+      "acknowledgedAt": null,
+      "resolvedAt": null,
+      "resolutionNote": "",
+      "emailNotificationSent": false,
+      "emailNotifiedAt": null,
+      "notificationError": null,
+      "activity": [
+        {
+          "action": "Created",
+          "message": "Alert generated from a live Azure security finding.",
+          "timestamp": "2026-08-18T10:38:43.941Z"
+        }
+      ]
+    },
+    "ALT-e0325cef-AZ-WEB-002": {
+      "status": "Active",
+      "createdAt": "2026-08-18T10:38:43.941Z",
+      "acknowledgedAt": null,
+      "resolvedAt": null,
+      "resolutionNote": "",
+      "emailNotificationSent": false,
+      "emailNotifiedAt": null,
+      "notificationError": null,
+      "activity": [
+        {
+          "action": "Created",
+          "message": "Alert generated from a live Azure security finding.",
+          "timestamp": "2026-08-18T10:38:43.941Z"
+        }
+      ]
+    }
+  }
+}

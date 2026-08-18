@@ -6,6 +6,7 @@
  "dependencies": {
   "@azure/arm-resourcegraph": "^5.0.0",
   "@azure/identity": "^4.13.1",
+  "@azure/monitor-query-metrics": "^1.0.0",
   "cors": "^2.8.6",
   "dotenv": "^17.4.2",
   "express": "^5.2.1"

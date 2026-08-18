@@ -159,3 +159,7 @@ export const downloadFindingsCsv = async () => {
 
   URL.revokeObjectURL(downloadUrl);
 };
+export const getMetrics = async () => {
+  const response = await fetch(`${API_BASE_URL}/metrics`);
+  return handleResponse(response);
+};
