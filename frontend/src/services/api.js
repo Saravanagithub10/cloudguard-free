@@ -34,7 +34,7 @@ export const getHealthStatus = async () => {
 // =========================
 
 export const getResources = async () => {
-  const response = await fetch(`${API_BASE_URL}/azure/resources`);
+  const response = await fetch(`${API_BASE_URL}/resources`);
   return handleResponse(response);
 };
 
