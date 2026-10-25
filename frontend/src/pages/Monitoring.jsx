@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import StatCard from "../components/StatCard";
+import StatCard from "../components/statCard";
 import MetricTrendChart from "../components/MetricTrendChart";
 import { getMetrics } from "../services/api";
 

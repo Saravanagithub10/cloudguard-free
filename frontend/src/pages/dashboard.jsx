@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import StatCard from "../components/StatCard";
+import StatCard from "../components/statCard";
 import ResourceTable from "../components/ResourceTable";
 import FindingDetails from "../components/FindingDetails";
 import AlertsTable from "../components/AlertsTable";
