@@ -1,0 +1,57 @@
+﻿name: CloudGuard CD
+
+on:
+  workflow_run:
+    workflows: ["CloudGuard CI"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: cloudguard-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      ${{
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.head_repository.full_name == github.repository
+      }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout successful CI commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install production dependencies
+        run: npm ci --omit=dev
+        working-directory: backend
+
+      - name: Authenticate to Azure with OIDC
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy CloudGuard backend
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
+          package: backend

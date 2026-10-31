@@ -1,16 +1,20 @@
 {
  "scripts": {
   "start": "node server.js",
-"dev": "nodemon --watch server.js --watch routes --watch controllers --watch services --watch config --watch middleware --watch rules --watch utils server.js" },
+  "dev": "nodemon --watch server.js --watch routes --watch controllers --watch services --watch config --watch middleware --watch rules --watch utils server.js"
+ },
  "dependencies": {
   "@azure/arm-resourcegraph": "^5.0.0",
+  "@azure/functions": "^4.17.0",
   "@azure/identity": "^4.13.1",
   "@azure/monitor-query-metrics": "^1.0.0",
+  "azfn-express": "^1.1.0",
   "cors": "^2.8.6",
   "dotenv": "^17.4.2",
   "express": "^5.2.1"
  },
  "devDependencies": {
   "nodemon": "^3.1.14"
- }
+ },
+ "main": "function-app.js"
 }

@@ -1,3 +1,4 @@
+
 const createFinding = (
   ruleId,
   finding,
@@ -12,239 +13,244 @@ const createFinding = (
   recommendation,
 });
 
-// STORAGE
-
+// STORAGE ACCOUNT
 const scanStorageAccount = (resource) => {
   const findings = [];
   const config = resource.configuration || {};
 
   if (config.publicNetworkAccess === "Enabled") {
-    findings.push(
-      createFinding(
-        "AZ-ST-001",
-        "Public network access enabled",
-        "Medium",
-        15,
-        "Disable public network access when possible or restrict access using private endpoints."
-      )
-    );
+    findings.push(createFinding(
+      "AZ-ST-001",
+      "Public network access enabled",
+      "Medium",
+      15,
+      "Disable public network access when possible or restrict access using private endpoints."
+    ));
   }
 
   if (config.networkDefaultAction === "Allow") {
-    findings.push(
-      createFinding(
-        "AZ-ST-002",
-        "Storage firewall allows access from all networks",
-        "High",
-        25,
-        "Configure the network ACL default action as Deny."
-      )
-    );
+    findings.push(createFinding(
+      "AZ-ST-002",
+      "Storage firewall allows access from all networks",
+      "High",
+      25,
+      "Configure the network ACL default action as Deny."
+    ));
   }
 
   if (config.allowBlobPublicAccess === true) {
-    findings.push(
-      createFinding(
-        "AZ-ST-003",
-        "Blob public access enabled",
-        "Critical",
-        35,
-        "Disable anonymous blob public access."
-      )
-    );
+    findings.push(createFinding(
+      "AZ-ST-003",
+      "Blob public access enabled",
+      "Critical",
+      35,
+      "Disable anonymous blob public access."
+    ));
   }
 
   if (config.supportsHttpsTrafficOnly === false) {
-    findings.push(
-      createFinding(
-        "AZ-ST-004",
-        "HTTPS-only traffic is disabled",
-        "High",
-        25,
-        "Enable secure transfer required."
-      )
-    );
+    findings.push(createFinding(
+      "AZ-ST-004",
+      "HTTPS-only traffic is disabled",
+      "High",
+      25,
+      "Enable secure transfer required."
+    ));
   }
 
   if (
     config.minimumTlsVersion !== "Unknown" &&
+    config.minimumTlsVersion != null &&
     config.minimumTlsVersion !== "TLS1_2"
   ) {
-    findings.push(
-      createFinding(
-        "AZ-ST-005",
-        "Minimum TLS version is below TLS 1.2",
-        "High",
-        25,
-        "Configure minimum TLS version to TLS 1.2 or higher."
-      )
-    );
+    findings.push(createFinding(
+      "AZ-ST-005",
+      "Minimum TLS version is below TLS 1.2",
+      "High",
+      25,
+      "Configure minimum TLS version to TLS 1.2 or higher."
+    ));
   }
 
   if (config.sharedKeyAccess === true) {
-    findings.push(
-      createFinding(
-        "AZ-ST-006",
-        "Shared Key authorization is enabled",
-        "Medium",
-        15,
-        "Where supported, use Microsoft Entra ID authentication instead of Shared Key."
-      )
-    );
+    findings.push(createFinding(
+      "AZ-ST-006",
+      "Shared Key authorization is enabled",
+      "Medium",
+      15,
+      "Where supported, use Microsoft Entra ID authentication instead of Shared Key."
+    ));
   }
 
   return findings;
 };
 
-// WEB APPS
-
+// WEB APPS / FUNCTION APPS
 const scanWebApp = (resource) => {
   const findings = [];
   const config = resource.configuration || {};
 
   if (config.httpsOnly === false) {
-    findings.push(
-      createFinding(
-        "AZ-WEB-001",
-        "HTTPS-only traffic is disabled",
-        "High",
-        25,
-        "Enable HTTPS Only."
-      )
-    );
+    findings.push(createFinding(
+      "AZ-WEB-001",
+      "HTTPS-only traffic is disabled",
+      "High",
+      25,
+      "Enable HTTPS Only."
+    ));
   }
 
   if (config.publicNetworkAccess === "Enabled") {
-    findings.push(
-      createFinding(
-        "AZ-WEB-002",
-        "Public network access enabled",
-        "Medium",
-        15,
-        "Restrict inbound access when public exposure is not required."
-      )
-    );
+    findings.push(createFinding(
+      "AZ-WEB-002",
+      "Public network access enabled",
+      "Medium",
+      15,
+      "Restrict inbound access when public exposure is not required."
+    ));
   }
 
   if (config.managedIdentityEnabled === false) {
-    findings.push(
-      createFinding(
-        "AZ-WEB-003",
-        "Managed identity is not enabled",
-        "Medium",
-        15,
-        "Enable managed identity where the application accesses Azure resources."
-      )
-    );
+    findings.push(createFinding(
+      "AZ-WEB-003",
+      "Managed identity is not enabled",
+      "Medium",
+      15,
+      "Enable managed identity where the application accesses Azure resources."
+    ));
   }
 
   if (config.remoteDebuggingEnabled === true) {
-    findings.push(
-      createFinding(
-        "AZ-WEB-004",
-        "Remote debugging is enabled",
-        "Medium",
-        15,
-        "Disable remote debugging when it is not required."
-      )
-    );
+    findings.push(createFinding(
+      "AZ-WEB-004",
+      "Remote debugging is enabled",
+      "Medium",
+      15,
+      "Disable remote debugging when it is not required."
+    ));
+  }
+
+  return findings;
+};
+
+// STATIC WEB APPS
+const scanStaticWebApp = (resource) => {
+  const findings = [];
+  const config = resource.configuration || {};
+
+  if (config.publicNetworkAccess === "Enabled") {
+    findings.push(createFinding(
+      "AZ-SWA-001",
+      "Static Web App public network access is enabled",
+      "Medium",
+      15,
+      "Review whether public access is required and restrict access where supported."
+    ));
   }
 
   return findings;
 };
 
 // SQL SERVER
-
 const scanSqlServer = (resource) => {
   const findings = [];
   const config = resource.configuration || {};
 
   if (config.publicNetworkAccess === "Enabled") {
-    findings.push(
-      createFinding(
-        "AZ-SQL-001",
-        "SQL Server public network access is enabled",
-        "High",
-        25,
-        "Disable public network access where possible or restrict connectivity using firewall rules and private endpoints."
-      )
-    );
+    findings.push(createFinding(
+      "AZ-SQL-001",
+      "SQL Server public network access is enabled",
+      "High",
+      25,
+      "Disable public network access where possible or restrict connectivity using firewall rules and private endpoints."
+    ));
   }
 
   if (config.privateEndpointCount === 0) {
-    findings.push(
-      createFinding(
-        "AZ-SQL-002",
-        "No private endpoint configured",
-        "Medium",
-        15,
-        "Consider using a private endpoint for private network connectivity."
-      )
-    );
+    findings.push(createFinding(
+      "AZ-SQL-002",
+      "No private endpoint configured",
+      "Medium",
+      15,
+      "Consider using a private endpoint for private network connectivity."
+    ));
   }
 
   if (config.managedIdentityEnabled === false) {
-    findings.push(
-      createFinding(
-        "AZ-SQL-003",
-        "Managed identity is not enabled",
-        "Medium",
-        15,
-        "Enable a managed identity when SQL Server needs to access Azure services securely."
-      )
-    );
+    findings.push(createFinding(
+      "AZ-SQL-003",
+      "Managed identity is not enabled",
+      "Medium",
+      15,
+      "Enable a managed identity when SQL Server needs to access Azure services securely."
+    ));
   }
 
   if (
     config.minimumTlsVersion !== "Unknown" &&
+    config.minimumTlsVersion != null &&
     config.minimumTlsVersion !== "1.2"
   ) {
-    findings.push(
-      createFinding(
-        "AZ-SQL-004",
-        "Minimum TLS version is below TLS 1.2",
-        "High",
-        25,
-        "Configure the SQL logical server minimum TLS version to TLS 1.2."
-      )
-    );
+    findings.push(createFinding(
+      "AZ-SQL-004",
+      "Minimum TLS version is below TLS 1.2",
+      "High",
+      25,
+      "Configure the SQL logical server minimum TLS version to TLS 1.2."
+    ));
   }
 
   return findings;
 };
 
 // SQL DATABASE
-
 const scanSqlDatabase = (resource) => {
   const findings = [];
   const config = resource.configuration || {};
 
-  // Don't treat system master DB like an application DB.
   if (resource.name?.toLowerCase() === "master") {
     return findings;
   }
 
   if (config.infrastructureEncryption === false) {
-    findings.push(
-      createFinding(
-        "AZ-SQLDB-001",
-        "Infrastructure encryption is not enabled",
-        "Medium",
-        15,
-        "Evaluate enabling infrastructure encryption when stronger at-rest protection is required."
-      )
-    );
+    findings.push(createFinding(
+      "AZ-SQLDB-001",
+      "Infrastructure encryption is not enabled",
+      "Medium",
+      15,
+      "Evaluate enabling infrastructure encryption when stronger at-rest protection is required."
+    ));
   }
 
   return findings;
 };
 
-// RISK
+// APP SERVICE PLAN
+const scanAppServicePlan = (resource) => {
+  const findings = [];
+  const config = resource.configuration || {};
 
+  // Do not flag non-zone-redundant plans by default.
+  // Zone redundancy depends on region, SKU, and availability requirements.
+  // Do not treat missing or unknown configuration as a vulnerability.
+
+  if (config.provisioningState === "Failed") {
+    findings.push(createFinding(
+      "AZ-ASP-001",
+      "App Service Plan provisioning has failed",
+      "High",
+      25,
+      "Inspect the Azure deployment and activity logs to identify and resolve the provisioning failure."
+    ));
+  }
+
+  return findings;
+};
+
+// RISK CALCULATION
 const calculateRiskPoints = (findings) =>
   findings.reduce(
-    (total, finding) =>
-      total + (finding.riskPoints || 0),
+    (total, finding) => total + (finding.riskPoints || 0),
     0
   );
 
@@ -256,13 +262,11 @@ const determineRiskLevel = (riskPoints) => {
 };
 
 // MAIN SCANNER
-
 const scanResource = (resource) => {
   let findings = [];
   let hasScanner = false;
 
-  const azureType =
-    resource.azureType?.toLowerCase() || "";
+  const azureType = resource.azureType?.toLowerCase() || "";
 
   switch (azureType) {
     case "microsoft.storage/storageaccounts":
@@ -272,6 +276,11 @@ const scanResource = (resource) => {
 
     case "microsoft.web/sites":
       findings = scanWebApp(resource);
+      hasScanner = true;
+      break;
+
+    case "microsoft.web/staticsites":
+      findings = scanStaticWebApp(resource);
       hasScanner = true;
       break;
 
@@ -285,6 +294,11 @@ const scanResource = (resource) => {
       hasScanner = true;
       break;
 
+    case "microsoft.web/serverfarms":
+      findings = scanAppServicePlan(resource);
+      hasScanner = true;
+      break;
+
     default:
       findings = [];
       hasScanner = false;
@@ -294,15 +308,11 @@ const scanResource = (resource) => {
 
   return {
     ...resource,
-
     findings,
-
     riskPoints,
-
     riskLevel: hasScanner
       ? determineRiskLevel(riskPoints)
       : "Unknown",
-
     securityStatus: hasScanner
       ? findings.length > 0
         ? "At Risk"
